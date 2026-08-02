@@ -1,0 +1,21 @@
+linters:
+  # Disable all linters first so you have explicit control over what runs
+  disable-all: true 
+  enable:
+    # --- Your specific requirement ---
+    - recvcheck
+
+    # --- Core Defaults (The essential Go bugs/errors checkers) ---
+    - errcheck    # Checks for unchecked errors
+    - gosimple    # Suggests code simplifications
+    - govet       # The official Go tool for finding suspicious constructs
+    - ineffassign # Detects when assignments to existing variables are not used
+    - staticcheck # A massive, highly recommended static analysis tool
+    - typecheck   # Standard Go compiler type checking
+
+    # --- Highly Recommended Additions (Style, Performance, Security) ---
+    - gocritic    # The most comprehensive style and performance linter
+    - gosec       # Inspects source code for security problems
+    - goimports   # Ensures imports are sorted and unused ones are removed
+    - misspell    # Catches common English typos in comments and strings
+    - revive      # A fast, configurable, and strict replacement for the deprecated 'golint'
