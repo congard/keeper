@@ -3,7 +3,7 @@ package ssh
 import (
 	"context"
 	"fmt"
-	"keeper/kit/eventbus"
+	"keeper/pkg/eventbus"
 	"log/slog"
 	"regexp"
 	"time"

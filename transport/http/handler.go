@@ -2,8 +2,8 @@ package http
 
 import (
 	"encoding/json"
-	"keeper/kit/eventbus"
-	"keeper/kit/kitlog"
+	"keeper/pkg/eventbus"
+	"keeper/pkg/logger"
 	"keeper/transport"
 	"net/http"
 )
@@ -32,7 +32,7 @@ func (h *BroadcastingHandler[T]) Route() string {
 func (h *BroadcastingHandler[T]) Handle(w http.ResponseWriter, r *http.Request) {
 	var msg transport.Message[T]
 	if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
-		kitlog.Error(err, kitlog.WithDescription("failed to decode request body"))
+		logger.LogIfError(err, logger.WithDescription("failed to decode request body"))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

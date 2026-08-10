@@ -3,7 +3,7 @@ package wg
 import (
 	"context"
 	"fmt"
-	"keeper/kit/eventbus"
+	"keeper/pkg/eventbus"
 	"log/slog"
 	"time"
 

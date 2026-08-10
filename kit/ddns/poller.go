@@ -5,9 +5,9 @@ import (
 	"log/slog"
 	"time"
 
-	"keeper/kit/eventbus"
-	"keeper/kit/kitlog"
 	"keeper/kit/poller"
+	"keeper/pkg/eventbus"
+	"keeper/pkg/logger"
 )
 
 type Subscriber eventbus.Subscriber[UpdateResult]
@@ -33,14 +33,14 @@ type updaterWorker struct {
 func (w updaterWorker) Do(_ context.Context) (UpdateResult, error) {
 	result, err := w.updater.Update()
 	if err != nil {
-		kitlog.Error(err, kitlog.WithDescription("ddns update failed"))
+		logger.LogIfError(err, logger.WithDescription("ddns update failed"))
 		return UpdateResult{}, err
 	}
 
 	slog.Info("ddns update succeeded",
 		slog.Any("status", result.Status),
-		kitlog.OptionalString("ipv4", result.IPv4),
-		kitlog.OptionalString("ipv6", result.IPv6),
+		logger.OptionalString("ipv4", result.IPv4),
+		logger.OptionalString("ipv6", result.IPv6),
 	)
 
 	return result, nil

@@ -1,6 +1,6 @@
 package transport
 
-import "keeper/types/trie"
+import "keeper/pkg/trie"
 
 type Request interface {
 	Route() Route

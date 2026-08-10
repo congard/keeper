@@ -3,7 +3,7 @@ package telemetry
 import (
 	"time"
 
-	"keeper/kit/types"
+	"keeper/pkg/percent"
 
 	"github.com/shirou/gopsutil/v4/host"
 )
@@ -27,11 +27,11 @@ type LoadAvg struct {
 }
 
 type CPUStats struct {
-	Usage  types.Percent `json:"usage"`
-	Cores  int           `json:"cores"`
-	User   types.Percent `json:"user"`
-	System types.Percent `json:"system"`
-	Idle   types.Percent `json:"idle"`
+	Usage  percent.Percent `json:"usage"`
+	Cores  int             `json:"cores"`
+	User   percent.Percent `json:"user"`
+	System percent.Percent `json:"system"`
+	Idle   percent.Percent `json:"idle"`
 }
 
 type MemoryStats struct {

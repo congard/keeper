@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"reflect"
 
-	"keeper/kit/eventbus"
-	"keeper/kit/kitlog"
+	"keeper/pkg/eventbus"
+	"keeper/pkg/logger"
 )
 
 type Publisher[T any] struct {
@@ -61,7 +61,7 @@ func (p *Publisher[T]) Run(ctx context.Context) error {
 		case value := <-sub.Chan():
 			status, err := p.sender.Send(p.transform(value))
 			if err != nil {
-				kitlog.Error(err)
+				logger.LogIfError(err)
 			} else {
 				log.Info("status",
 					slog.String("type", status.Type.String()),

@@ -3,7 +3,7 @@ package http
 import (
 	"encoding/json"
 	"fmt"
-	"keeper/kit/kitlog"
+	"keeper/pkg/logger"
 	"keeper/transport"
 	"log/slog"
 	"net/http"
@@ -88,7 +88,7 @@ func recoverMiddleware(next http.Handler) http.Handler {
 			if rec := recover(); rec != nil {
 				slog.Error("panic recovered", "error", rec)
 				err := errorResponse(w, "internal server error", http.StatusInternalServerError)
-				kitlog.Error(err, kitlog.WithDescription("failed to send error response"))
+				logger.LogIfError(err, logger.WithDescription("failed to send error response"))
 			}
 		}()
 		next.ServeHTTP(w, r)
@@ -117,5 +117,5 @@ func errorResponse(w http.ResponseWriter, message string, status int) error {
 
 func notFoundErrorHandler(w http.ResponseWriter, r *http.Request) {
 	err := errorResponse(w, fmt.Sprintf("Not found: %s %s", r.Method, r.URL.Path), http.StatusNotFound)
-	kitlog.Error(err)
+	logger.LogIfError(err)
 }

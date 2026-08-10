@@ -1,4 +1,4 @@
-package kitlog
+package logger
 
 import "log/slog"
 
@@ -14,7 +14,7 @@ func WithDescription(prefix string) ErrorOption {
 	}
 }
 
-func Error(err error, opts ...ErrorOption) {
+func LogIfError(err error, opts ...ErrorOption) {
 	if err == nil {
 		return
 	}

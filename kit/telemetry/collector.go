@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"keeper/pkg/percent"
 	"time"
 
 	"github.com/shirou/gopsutil/v4/cpu"
@@ -11,8 +12,6 @@ import (
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/shirou/gopsutil/v4/net"
 	"github.com/shirou/gopsutil/v4/sensors"
-
-	"keeper/kit/types"
 )
 
 type Collector interface {
@@ -103,11 +102,11 @@ func (c *GopsutilCollector) collectCPU(ctx context.Context, m *HostMetrics) erro
 	}
 
 	m.CPU = CPUStats{
-		Usage:  types.NewPercent(usage),
+		Usage:  percent.NewPercent(usage),
 		Cores:  cores,
-		User:   types.NewPercent(user),
-		System: types.NewPercent(system),
-		Idle:   types.NewPercent(idle),
+		User:   percent.NewPercent(user),
+		System: percent.NewPercent(system),
+		Idle:   percent.NewPercent(idle),
 	}
 	return nil
 }

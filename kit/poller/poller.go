@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"keeper/kit/eventbus"
+	"keeper/pkg/eventbus"
 )
 
 type Worker[T any] interface {
