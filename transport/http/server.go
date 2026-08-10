@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"keeper/kit/kitlog"
-	"keeper/kit/sender"
+	"keeper/transport"
 	"log/slog"
 	"net/http"
 	"time"
@@ -67,7 +67,7 @@ func (s *Server) Handle(pattern string, handler func(http.ResponseWriter, *http.
 }
 
 func (s *Server) RegisterHandler(handler Handler) {
-	s.mux.HandleFunc(handler.Endpoint(), handler.Handle)
+	s.mux.HandleFunc(handler.Route(), handler.Handle)
 }
 
 func loggingMiddleware(next http.Handler) http.Handler {
@@ -108,7 +108,7 @@ func jsonResponse(w http.ResponseWriter, data any, status int) error {
 func errorResponse(w http.ResponseWriter, message string, status int) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	err := json.NewEncoder(w).Encode(sender.ErrStatus(message))
+	err := json.NewEncoder(w).Encode(transport.ErrStatus(message))
 	if err != nil {
 		return fmt.Errorf("failed to encode error response: %w", err)
 	}

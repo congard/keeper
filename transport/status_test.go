@@ -1,4 +1,4 @@
-package sender
+package transport
 
 import (
 	"encoding/json"
