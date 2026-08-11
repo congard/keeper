@@ -46,8 +46,8 @@ func NewIngester(config *IngesterConfig) *Ingester {
 	}
 }
 
-func (ingester *Ingester) Push(request Request, response Response) {
-	exchange, accept := ingester.prePush(Exchange{request, response})
+func (ingester *Ingester) Push(exchange Exchange) {
+	exchange, accept := ingester.prePush(exchange)
 	if !accept {
 		return
 	}

@@ -11,8 +11,10 @@ import (
 )
 
 type Server struct {
-	srv *http.Server
-	mux *http.ServeMux
+	*http.Server
+	mux      *http.ServeMux
+	id       string
+	ingester *transport.Ingester
 }
 
 type ServerOption func(*serverOptions)
@@ -23,7 +25,18 @@ type serverOptions struct {
 	writeTimeout time.Duration
 }
 
-func NewServer(opts ...ServerOption) *Server {
+type ExchangeAdapter func(http.ResponseWriter, *http.Request) transport.Exchange
+
+type request[T any] struct {
+	req *http.Request
+}
+
+type response struct {
+	writer   http.ResponseWriter
+	senderID string
+}
+
+func NewServer(id string, ingester *transport.Ingester, opts ...ServerOption) *Server {
 	so := &serverOptions{
 		addr:         ":8080",
 		readTimeout:  10 * time.Second,
@@ -39,13 +52,15 @@ func NewServer(opts ...ServerOption) *Server {
 	handler := recoverMiddleware(loggingMiddleware(mux))
 
 	return &Server{
-		srv: &http.Server{
+		Server: &http.Server{
 			Addr:         so.addr,
 			Handler:      handler,
 			ReadTimeout:  so.readTimeout,
 			WriteTimeout: so.writeTimeout,
 		},
-		mux: mux,
+		mux:      mux,
+		id:       id,
+		ingester: ingester,
 	}
 }
 
@@ -62,12 +77,42 @@ func WithTimeout(readTimeout, writeTimeout time.Duration) ServerOption {
 	}
 }
 
-func (s *Server) Handle(pattern string, handler func(http.ResponseWriter, *http.Request)) {
-	s.mux.HandleFunc(pattern, handler)
+func NewExchangeAdapter[T any](s *Server) ExchangeAdapter {
+	return func(w http.ResponseWriter, r *http.Request) transport.Exchange {
+		return transport.Exchange{
+			Request:  &request[T]{req: r},
+			Response: &response{writer: w, senderID: s.id},
+		}
+	}
 }
 
-func (s *Server) RegisterHandler(handler Handler) {
-	s.mux.HandleFunc(handler.Route(), handler.Handle)
+func (s *Server) Handle(pattern string, adapter ExchangeAdapter) {
+	s.mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+		exchange := adapter(w, r)
+		s.ingester.Push(exchange)
+	})
+}
+
+func (r *request[T]) Route() transport.Route {
+	return transport.ParseRoute(r.req.URL.Path)
+}
+
+func (r *request[T]) Payload() (any, error) {
+	var msg transport.Message[T]
+	if err := json.NewDecoder(r.req.Body).Decode(&msg); err != nil {
+		return nil, fmt.Errorf("decode request payload: type=%T path=%s method=%s: %w",
+			msg, r.req.URL.Path, r.req.Method, err)
+	}
+	return msg, nil
+}
+
+func (r *response) Write(payload any) error {
+	r.writer.Header().Set("Content-Type", "application/json")
+	err := json.NewEncoder(r.writer).Encode(transport.NewMessage(r.senderID, payload))
+	if err != nil {
+		return fmt.Errorf("failed to encode payload: %w", err)
+	}
+	return nil
 }
 
 func loggingMiddleware(next http.Handler) http.Handler {
