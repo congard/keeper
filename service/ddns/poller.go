@@ -5,9 +5,9 @@ import (
 	"log/slog"
 	"time"
 
-	"keeper/kit/poller"
 	"keeper/pkg/eventbus"
 	"keeper/pkg/logger"
+	"keeper/pkg/poller"
 )
 
 type Subscriber eventbus.Subscriber[UpdateResult]

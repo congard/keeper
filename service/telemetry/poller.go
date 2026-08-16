@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"keeper/kit/poller"
+	"keeper/pkg/poller"
 )
 
 type Poller struct {
