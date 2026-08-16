@@ -17,13 +17,28 @@ type Client struct {
 	client   *http.Client
 }
 
+type ClientConfig struct {
+	SenderID string
+	URL      string
+	Client   *http.Client
+}
+
+type ClientPool struct {
+	client  *http.Client
+	clients []*Client
+}
+
 type ResponseDecoder = func(io.Reader) (any, error)
 
-func NewClient(url, senderID string) *Client {
+func NewClient(config ClientConfig) *Client {
+	client := config.Client
+	if client == nil {
+		client = defaultHTTPClient()
+	}
 	return &Client{
-		url:      url,
-		senderID: senderID,
-		client:   &http.Client{Timeout: 10 * time.Second},
+		url:      config.URL,
+		senderID: config.SenderID,
+		client:   client,
 	}
 }
 
@@ -54,6 +69,24 @@ func (c *Client) Send(path string, payload any, responseDecoder ResponseDecoder)
 	return responseDecoder(resp.Body)
 }
 
+func NewClientPool() *ClientPool {
+	return &ClientPool{
+		client:  defaultHTTPClient(),
+		clients: make([]*Client, 0),
+	}
+}
+
+func (p *ClientPool) Acquire(senderID, url string) *Client {
+	for _, c := range p.clients {
+		if c.senderID == senderID && c.url == url {
+			return c
+		}
+	}
+	c := NewClient(ClientConfig{SenderID: senderID, URL: url, Client: p.client})
+	p.clients = append(p.clients, c)
+	return c
+}
+
 func NewResponseDecoder[T any]() ResponseDecoder {
 	return func(reader io.Reader) (any, error) {
 		// Peek at the first byte to check if response is empty without consuming the stream
@@ -75,4 +108,8 @@ func NewResponseDecoder[T any]() ResponseDecoder {
 		}
 		return msg, nil
 	}
+}
+
+func defaultHTTPClient() *http.Client {
+	return &http.Client{Timeout: 10 * time.Second}
 }

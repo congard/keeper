@@ -21,7 +21,7 @@ func newHTTPSenderFactory(t *testing.T) sendertest.StringSenderFactory {
 		ts := httptest.NewServer(server.Handler)
 		t.Cleanup(func() { ts.Close() })
 
-		client := NewClient(ts.URL, sendertest.SenderID)
+		client := NewClient(ClientConfig{SenderID: sendertest.SenderID, URL: ts.URL})
 		return NewSender[string, string]("test", client)
 	}
 }
