@@ -1,7 +1,5 @@
 package transport
 
-import "time"
-
 //nolint:recvcheck // UnmarshalJSON requires pointer receiver per json.Unmarshaler interface
 type StatusType int
 
@@ -43,16 +41,14 @@ func (st *StatusType) UnmarshalJSON(data []byte) error {
 }
 
 type Status struct {
-	Type      StatusType `json:"type"`
-	Timestamp time.Time  `json:"timestamp"`
-	Message   string     `json:"message"`
+	Type    StatusType `json:"type"`
+	Message string     `json:"message"`
 }
 
 func NewStatus(typ StatusType, message string) Status {
 	return Status{
-		Type:      typ,
-		Timestamp: time.Now(),
-		Message:   message,
+		Type:    typ,
+		Message: message,
 	}
 }
 
