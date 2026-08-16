@@ -1,6 +1,10 @@
 package transport
 
-import "keeper/pkg/trie"
+import (
+	"fmt"
+	"keeper/pkg/trie"
+	"reflect"
+)
 
 type Request interface {
 	Route() Route
@@ -15,6 +19,12 @@ type Exchange struct {
 	Request  Request
 	Response Response
 }
+
+type TypedRequest[T any] struct {
+	request Request
+}
+
+type TypedHandlerFunc[T any] func(TypedRequest[T], Response)
 
 type HandlerFunc func(Request, Response)
 type PrePushFunc func(Exchange) (exchange Exchange, accept bool)
@@ -62,4 +72,31 @@ func (ingester *Ingester) Push(exchange Exchange) {
 
 func (ingester *Ingester) Handle(route Route, handler HandlerFunc) {
 	ingester.handlers.SetValue(handler, route...)
+}
+
+func (r TypedRequest[T]) Route() Route {
+	return r.request.Route()
+}
+
+func (r TypedRequest[T]) Payload() (Message[T], error) {
+	raw, err := r.request.Payload()
+	if err != nil {
+		var zero Message[T]
+		return zero, err
+	}
+	payload, ok := raw.(Message[T])
+	if !ok {
+		var zero Message[T]
+		return zero, &UnexpectedResponseTypeError{
+			Expected: reflect.TypeFor[Message[T]]().String(),
+			Actual:   fmt.Sprintf("%T", raw),
+		}
+	}
+	return payload, nil
+}
+
+func NewTypedHandler[T any](handler TypedHandlerFunc[T]) HandlerFunc {
+	return func(req Request, resp Response) {
+		handler(TypedRequest[T]{req}, resp)
+	}
 }
