@@ -22,7 +22,11 @@ func NewMessage[T any](senderID string, payload T) Message[T] {
 	}
 }
 
-func (message *Message[T]) ToAny() AnyMessage {
+func (message Message[T]) IsEmpty() bool {
+	return message.SenderID == ""
+}
+
+func (message Message[T]) ToAny() AnyMessage {
 	return AnyMessage{
 		SenderID:  message.SenderID,
 		Timestamp: message.Timestamp,
