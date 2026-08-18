@@ -2,22 +2,12 @@ package wg
 
 import (
 	"context"
-	"fmt"
 	"keeper/pkg/eventbus"
 	"log/slog"
 	"time"
 
 	"golang.zx2c4.com/wireguard/wgctrl"
 )
-
-type Peer struct {
-	Name     string
-	Endpoint string
-	PubKey   string
-	LastSeen time.Time
-}
-
-type PeerNameResolver func(pubkey string) (name string)
 
 type EventType int
 
@@ -38,23 +28,24 @@ type Watcher struct {
 	peerTimeout      time.Duration
 	peerNameResolver PeerNameResolver
 	device           string
+	client           *wgctrl.Client
 }
 
 type WatcherOption func(*Watcher)
 
 type state struct {
-	client         *wgctrl.Client
 	lastHandshakes map[string]time.Time
 	log            *slog.Logger
 }
 
-func NewWatcher(opts ...WatcherOption) *Watcher {
+func NewWatcher(device string, client *wgctrl.Client, opts ...WatcherOption) *Watcher {
 	watcher := &Watcher{
 		eventBus:         eventbus.New[Event](),
 		interval:         5 * time.Second,
 		peerTimeout:      3 * time.Minute,
 		peerNameResolver: func(_ string) string { return "" },
-		device:           "wg0",
+		device:           device,
+		client:           client,
 	}
 
 	for _, opt := range opts {
@@ -82,24 +73,15 @@ func WithPeerNameResolver(resolver PeerNameResolver) WatcherOption {
 	}
 }
 
-func WithDevice(device string) WatcherOption {
-	return func(w *Watcher) {
-		w.device = device
-	}
+func (w *Watcher) EventBroadcaster() eventbus.Broadcaster[Event] {
+	return w.eventBus
 }
 
 func (w *Watcher) Run(ctx context.Context) error {
-	client, err := wgctrl.New()
-	if err != nil {
-		return fmt.Errorf("failed to open wgctrl client: %w", err)
-	}
-	defer client.Close()
-
 	log := slog.With("component", "WgWatcher", "device", w.device)
 	log.Info("polling WireGuard device for events")
 
 	s := state{
-		client:         client,
 		lastHandshakes: make(map[string]time.Time),
 		log:            log,
 	}
@@ -120,7 +102,7 @@ func (w *Watcher) Run(ctx context.Context) error {
 func (w *Watcher) tick(s state) {
 	log, lastHandshakes := s.log, s.lastHandshakes
 
-	dev, err := s.client.Device(w.device)
+	dev, err := w.client.Device(w.device)
 	if err != nil {
 		log.Error("fetching error", "error", err)
 		return
@@ -133,12 +115,7 @@ func (w *Watcher) tick(s state) {
 		publishEvent := func(typ EventType) {
 			w.eventBus.Publish(Event{
 				Type: typ,
-				Peer: Peer{
-					Name:     w.peerNameResolver(pubKey),
-					Endpoint: peer.Endpoint.String(),
-					PubKey:   pubKey,
-					LastSeen: lastSeen,
-				},
+				Peer: newPeer(peer, w.peerNameResolver),
 			})
 		}
 
