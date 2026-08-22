@@ -1,16 +1,13 @@
-package telemetry
+package stats
 
 import (
-	"time"
-
 	"keeper/pkg/percent"
 
 	"github.com/shirou/gopsutil/v4/host"
 )
 
 type HostMetrics struct {
-	Timestamp   time.Time          `json:"timestamp"`
-	Info        host.InfoStat      `json:"info"`
+	Info        InfoStat           `json:"info"`
 	Load        LoadAvg            `json:"load"`
 	CPU         CPUStats           `json:"cpu"`
 	Memory      MemoryStats        `json:"memory"`
@@ -18,6 +15,8 @@ type HostMetrics struct {
 	Network     []NetStats         `json:"network"`
 	Temperature []TemperatureStats `json:"temperature"`
 }
+
+type InfoStat host.InfoStat
 
 // LoadAvg holds the 1, 5 and 15 minute load averages
 type LoadAvg struct {
@@ -67,11 +66,4 @@ type TemperatureStats struct {
 	Temperature float64 `json:"temperature"`
 	High        float64 `json:"high"`
 	Critical    float64 `json:"critical"`
-}
-
-// NewHostMetrics creates a HostMetrics snapshot stamped with the current time.
-func NewHostMetrics() HostMetrics {
-	return HostMetrics{
-		Timestamp: time.Now(),
-	}
 }

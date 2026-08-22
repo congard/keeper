@@ -1,4 +1,4 @@
-package telemetry
+package stats
 
 import (
 	"context"
@@ -14,78 +14,86 @@ import (
 	"github.com/shirou/gopsutil/v4/sensors"
 )
 
-type Collector interface {
-	Collect(ctx context.Context) (HostMetrics, error)
-}
+func Collect(ctx context.Context) (HostMetrics, error) {
+	var m HostMetrics
 
-type GopsutilCollector struct{}
+	info, err := CollectInfo(ctx)
+	if err != nil {
+		return m, err
+	}
+	m.Info = info
 
-func NewGopsutilCollector() (*GopsutilCollector, error) {
-	return &GopsutilCollector{}, nil
-}
+	loadAvg, err := CollectLoad(ctx)
+	if err != nil {
+		return m, err
+	}
+	m.Load = loadAvg
 
-func (c *GopsutilCollector) Collect(ctx context.Context) (HostMetrics, error) {
-	m := NewHostMetrics()
+	cpuStats, err := CollectCPU(ctx)
+	if err != nil {
+		return m, err
+	}
+	m.CPU = cpuStats
 
-	if err := c.collectInfo(ctx, &m); err != nil {
+	memory, err := CollectMemory(ctx)
+	if err != nil {
 		return m, err
 	}
-	if err := c.collectLoad(ctx, &m); err != nil {
+	m.Memory = memory
+
+	disks, err := CollectDisk(ctx)
+	if err != nil {
 		return m, err
 	}
-	if err := c.collectCPU(ctx, &m); err != nil {
+	m.Disk = disks
+
+	network, err := CollectNetwork(ctx)
+	if err != nil {
 		return m, err
 	}
-	if err := c.collectMemory(ctx, &m); err != nil {
+	m.Network = network
+
+	temperatures, err := CollectTemperature(ctx)
+	if err != nil {
 		return m, err
 	}
-	if err := c.collectDisk(ctx, &m); err != nil {
-		return m, err
-	}
-	if err := c.collectNetwork(ctx, &m); err != nil {
-		return m, err
-	}
-	if err := c.collectTemperature(ctx, &m); err != nil {
-		return m, err
-	}
+	m.Temperature = temperatures
 
 	return m, nil
 }
 
-func (c *GopsutilCollector) collectInfo(ctx context.Context, m *HostMetrics) error {
+func CollectInfo(ctx context.Context) (InfoStat, error) {
 	info, err := host.InfoWithContext(ctx)
 	if err != nil {
-		return err
+		return InfoStat{}, err
 	}
-	m.Info = *info
-	return nil
+	return InfoStat(*info), nil
 }
 
-func (c *GopsutilCollector) collectLoad(ctx context.Context, m *HostMetrics) error {
+func CollectLoad(ctx context.Context) (LoadAvg, error) {
 	avg, err := load.AvgWithContext(ctx)
 	if err != nil {
-		return err
+		return LoadAvg{}, err
 	}
-	m.Load = LoadAvg{
+	return LoadAvg{
 		One:     avg.Load1,
 		Five:    avg.Load5,
 		Fifteen: avg.Load15,
-	}
-	return nil
+	}, nil
 }
 
-func (c *GopsutilCollector) collectCPU(ctx context.Context, m *HostMetrics) error {
+func CollectCPU(ctx context.Context) (CPUStats, error) {
 	percentages, err := cpu.PercentWithContext(ctx, time.Second, false)
 	if err != nil {
-		return err
+		return CPUStats{}, err
 	}
 	cores, err := cpu.CountsWithContext(ctx, true)
 	if err != nil {
-		return err
+		return CPUStats{}, err
 	}
 	times, err := cpu.TimesWithContext(ctx, false)
 	if err != nil {
-		return err
+		return CPUStats{}, err
 	}
 
 	usage := 0.0
@@ -101,39 +109,37 @@ func (c *GopsutilCollector) collectCPU(ctx context.Context, m *HostMetrics) erro
 		idle = t.Idle
 	}
 
-	m.CPU = CPUStats{
+	return CPUStats{
 		Usage:  percent.NewPercent(usage),
 		Cores:  cores,
 		User:   percent.NewPercent(user),
 		System: percent.NewPercent(system),
 		Idle:   percent.NewPercent(idle),
-	}
-	return nil
+	}, nil
 }
 
-func (c *GopsutilCollector) collectMemory(ctx context.Context, m *HostMetrics) error {
+func CollectMemory(ctx context.Context) (MemoryStats, error) {
 	vm, err := mem.VirtualMemoryWithContext(ctx)
 	if err != nil {
-		return err
+		return MemoryStats{}, err
 	}
 	swap, err := mem.SwapMemoryWithContext(ctx)
 	if err != nil {
-		return err
+		return MemoryStats{}, err
 	}
-	m.Memory = MemoryStats{
+	return MemoryStats{
 		Total:     vm.Total,
 		Used:      vm.Used,
 		Free:      vm.Free,
 		SwapTotal: swap.Total,
 		SwapUsed:  swap.Used,
-	}
-	return nil
+	}, nil
 }
 
-func (c *GopsutilCollector) collectDisk(ctx context.Context, m *HostMetrics) error {
+func CollectDisk(ctx context.Context) ([]DiskStats, error) {
 	partitions, err := disk.PartitionsWithContext(ctx, false)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	disks := make([]DiskStats, 0, len(partitions))
 	for _, p := range partitions {
@@ -160,14 +166,13 @@ func (c *GopsutilCollector) collectDisk(ctx context.Context, m *HostMetrics) err
 			WriteBytes: writeBytes,
 		})
 	}
-	m.Disk = disks
-	return nil
+	return disks, nil
 }
 
-func (c *GopsutilCollector) collectNetwork(ctx context.Context, m *HostMetrics) error {
+func CollectNetwork(ctx context.Context) ([]NetStats, error) {
 	counters, err := net.IOCountersWithContext(ctx, true)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	nets := make([]NetStats, 0, len(counters))
 	for _, n := range counters {
@@ -181,14 +186,13 @@ func (c *GopsutilCollector) collectNetwork(ctx context.Context, m *HostMetrics) 
 			TxErrors:  n.Errout,
 		})
 	}
-	m.Network = nets
-	return nil
+	return nets, nil
 }
 
-func (c *GopsutilCollector) collectTemperature(ctx context.Context, m *HostMetrics) error {
+func CollectTemperature(ctx context.Context) ([]TemperatureStats, error) {
 	temps, err := sensors.TemperaturesWithContext(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	readings := make([]TemperatureStats, 0, len(temps))
 	for _, t := range temps {
@@ -199,6 +203,5 @@ func (c *GopsutilCollector) collectTemperature(ctx context.Context, m *HostMetri
 			Critical:    t.Critical,
 		})
 	}
-	m.Temperature = readings
-	return nil
+	return readings, nil
 }
