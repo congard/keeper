@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"keeper/pkg/eventbus"
+	"keeper/pkg/svcutil"
 	"log/slog"
 
 	"golang.zx2c4.com/wireguard/wgctrl"
@@ -37,12 +38,7 @@ func NewService(config ServiceConfig) (*Service, error) {
 	if config.context != nil {
 		watcher = NewWatcher(config.device, client, append(
 			config.watcherOptions, WithPeerNameResolver(config.nameResolver))...)
-
-		go func() {
-			if err := watcher.Run(config.context); err != nil {
-				logger.Error("watcher run failed", "error", err)
-			}
-		}()
+		svcutil.Go(logger, func() error { return watcher.Run(config.context) })
 	}
 
 	return &Service{
