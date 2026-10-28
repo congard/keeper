@@ -12,17 +12,17 @@ import (
 
 type Subscriber eventbus.Subscriber[UpdateResult]
 
-type Poller struct {
+type Service struct {
 	*poller.Poller[UpdateResult]
 }
 
-func New(interval time.Duration) *Poller {
-	return &Poller{
+func New(interval time.Duration) *Service {
+	return &Service{
 		Poller: poller.New[UpdateResult](interval),
 	}
 }
 
-func (p *Poller) AddUpdater(updater Updater) {
+func (p *Service) AddUpdater(updater Updater) {
 	p.AddWorker(updaterWorker{updater})
 }
 
