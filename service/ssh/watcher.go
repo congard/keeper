@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"keeper/pkg/eventbus"
+	"keeper/pkg/logger"
 	"log/slog"
 	"regexp"
 	"time"
@@ -67,7 +68,11 @@ func (w *Watcher) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to open journal: %w", err)
 	}
-	defer j.Close()
+
+	defer func(j *sdjournal.Journal) {
+		err := j.Close()
+		logger.LogIfErrorTyped[Watcher](err)
+	}(j)
 
 	if err := j.AddMatch("SYSLOG_IDENTIFIER=sshd"); err != nil {
 		return fmt.Errorf("match error: %w", err)

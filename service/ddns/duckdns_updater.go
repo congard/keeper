@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"keeper/pkg/logger"
 )
 
 type DuckDNSUpdater struct {
@@ -52,14 +54,18 @@ const (
 )
 
 func (updater *DuckDNSUpdater) Update() (UpdateResult, error) {
-	url := fmt.Sprintf("https://www.duckdns.org/update?domains=%s&token=%s&verbose=true",
+	target := fmt.Sprintf("https://www.duckdns.org/update?domains=%s&token=%s&verbose=true",
 		url.QueryEscape(updater.domain), url.QueryEscape(updater.token))
 
-	resp, err := updater.client.Get(url)
+	resp, err := updater.client.Get(target)
 	if err != nil {
 		return UpdateResult{}, fmt.Errorf("duckdns request failed: %w", err)
 	}
-	defer resp.Body.Close()
+
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		logger.LogIfErrorTyped[DuckDNSUpdater](err)
+	}(resp.Body)
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

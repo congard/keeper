@@ -1,6 +1,10 @@
 package logger
 
-import "log/slog"
+import (
+	"log/slog"
+	"reflect"
+	"slices"
+)
 
 type ErrorOption func(*errorOptions)
 
@@ -8,26 +12,26 @@ type errorOptions struct {
 	description string
 }
 
-func WithDescription(prefix string) ErrorOption {
-	return func(lo *errorOptions) {
-		lo.description = prefix
-	}
+func WithDescription(prefix string) slog.Attr {
+	return OptionalString("description", prefix)
 }
 
-func LogIfError(err error, opts ...ErrorOption) {
+func logError(err error, args []any) {
+	slog.Error("an error occurred", append(args, slog.Any("error", err))...)
+}
+
+func LogIfError(err error, args ...any) {
 	if err == nil {
 		return
 	}
+	logError(err, slices.Clone(args))
+}
 
-	lo := &errorOptions{description: "error"}
-	for _, opt := range opts {
-		opt(lo)
+func LogIfErrorTyped[T any](err error, args ...any) {
+	if err == nil {
+		return
 	}
-
-	slog.Error("an error occurred",
-		slog.Any("error", err),
-		OptionalString("description", lo.description),
-	)
+	logError(err, append(slices.Clone(args), slog.String("type", reflect.TypeFor[T]().String())))
 }
 
 func OptionalString(key, val string) slog.Attr {

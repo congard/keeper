@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"keeper/pkg/logger"
 	"keeper/transport"
 	"net/http"
 	"time"
@@ -60,7 +61,11 @@ func (c *Client) Send(path string, payload any, responseDecoder ResponseDecoder)
 	if err != nil {
 		return nil, fmt.Errorf("send request: %w", err)
 	}
-	defer resp.Body.Close()
+
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		logger.LogIfErrorTyped[Client](err)
+	}(resp.Body)
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("unexpected status: %d", resp.StatusCode)
@@ -78,7 +83,7 @@ func NewClientPool() *ClientPool {
 
 func (p *ClientPool) Acquire(senderID, url string) *Client {
 	for _, c := range p.clients {
-		if c.senderID == senderID && c.url == url {
+		if c.senderID == senderID && c.url == url { // TODO: check normalized url
 			return c
 		}
 	}

@@ -2,6 +2,7 @@ package poller
 
 import (
 	"context"
+	"keeper/pkg/logger"
 	"time"
 
 	"keeper/pkg/eventbus"
@@ -53,6 +54,7 @@ func (p *Poller[T]) tick(ctx context.Context) {
 	for _, w := range p.workers {
 		item, err := w.Do(ctx)
 		if err != nil {
+			logger.LogIfErrorTyped[Poller[T]](err, logger.WithDescription("poll failed"))
 			continue
 		}
 		batch = append(batch, item)
