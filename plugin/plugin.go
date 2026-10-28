@@ -4,6 +4,6 @@ import "context"
 
 type Plugin interface {
 	Name() string
-	NewConfigStruct() any
-	Execute(config any, ctx context.Context)
+	ConfigSchema() any
+	Execute(ctx context.Context, config any) error
 }
