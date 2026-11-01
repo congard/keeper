@@ -4,53 +4,44 @@ import (
 	"context"
 	"keeper/pkg/eventbus"
 	"keeper/pkg/logger"
-	"keeper/pkg/svcutil"
 	"log/slog"
 	"time"
 )
 
 type Service struct {
-	context      context.Context
 	pollInterval time.Duration
 	eventBus     *eventbus.EventBus[HostMetrics]
 	logger       *slog.Logger
 }
 
-func NewService(ctx context.Context, pollInterval time.Duration) *Service {
-	log := logger.ForComponent[Service]()
-
-	service := &Service{
+func NewService(pollInterval time.Duration) *Service {
+	return &Service{
 		pollInterval: pollInterval,
-		context:      ctx,
 		eventBus:     eventbus.New[HostMetrics](),
-		logger:       log,
+		logger:       logger.ForComponent[Service](),
 	}
-
-	svcutil.Go(log, service.runPoller)
-
-	return service
 }
 
 func (s *Service) EventBroadcaster() eventbus.Broadcaster[HostMetrics] {
 	return s.eventBus
 }
 
-func (s *Service) runPoller() error {
+func (s *Service) Run(ctx context.Context) error {
 	ticker := time.NewTicker(s.pollInterval)
 	defer ticker.Stop()
 
 	for {
 		select {
-		case <-s.context.Done():
-			return s.context.Err()
+		case <-ctx.Done():
+			return ctx.Err()
 		case <-ticker.C:
-			s.tickPoller()
+			s.tick(ctx)
 		}
 	}
 }
 
-func (s *Service) tickPoller() {
-	timeoutContext, cancel := context.WithTimeout(s.context, 2*time.Second)
+func (s *Service) tick(ctx context.Context) {
+	timeoutContext, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
 	stats, err := Collect(timeoutContext)

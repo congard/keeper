@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"keeper/pkg/eventbus"
 	"keeper/pkg/logger"
-	"keeper/pkg/svcutil"
 	"log/slog"
 
 	"golang.zx2c4.com/wireguard/wgctrl"
@@ -15,7 +14,6 @@ type ServiceConfig struct {
 	device         string
 	nameResolver   PeerNameResolver
 	watcherOptions []WatcherOption
-	context        context.Context
 }
 
 type Service struct {
@@ -32,23 +30,20 @@ func NewService(config ServiceConfig) (*Service, error) {
 		return nil, fmt.Errorf("failed to open wgctrl client: %w", err)
 	}
 
-	var watcher *Watcher
-
-	log := logger.ForComponent[Service]("device", config.device)
-
-	if config.context != nil {
-		watcher = NewWatcher(config.device, client, append(
-			config.watcherOptions, WithPeerNameResolver(config.nameResolver))...)
-		svcutil.Go(log, func() error { return watcher.Run(config.context) })
-	}
+	watcher := NewWatcher(config.device, client, append(
+		config.watcherOptions, WithPeerNameResolver(config.nameResolver))...)
 
 	return &Service{
 		device:       config.device,
 		nameResolver: config.nameResolver,
 		watcher:      watcher,
 		client:       client,
-		log:          log,
+		log:          logger.ForComponent[Service]("device", config.device),
 	}, nil
+}
+
+func (s *Service) Run(ctx context.Context) error {
+	return s.watcher.Run(ctx)
 }
 
 func (s *Service) Close() error {
