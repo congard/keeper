@@ -40,3 +40,7 @@ func OptionalString(key, val string) slog.Attr {
 	}
 	return slog.String(key, val)
 }
+
+func ForComponent[T any](args ...any) *slog.Logger {
+	return slog.With(append(slices.Clone(args), slog.String("component", reflect.TypeFor[T]().String()))...)
+}

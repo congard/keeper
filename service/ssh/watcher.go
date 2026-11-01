@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"keeper/pkg/eventbus"
 	"keeper/pkg/logger"
-	"log/slog"
 	"regexp"
 	"time"
 
@@ -91,7 +90,7 @@ func (w *Watcher) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to step back: %w", err)
 	}
 
-	log := slog.With("component", "SSHWatcher")
+	log := logger.ForComponent[Watcher]()
 	log.Info("Listening for live SSH & Sudo systemd events...")
 
 	for {

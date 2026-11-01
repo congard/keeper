@@ -3,6 +3,7 @@ package wg
 import (
 	"context"
 	"keeper/pkg/eventbus"
+	"keeper/pkg/logger"
 	"log/slog"
 	"time"
 
@@ -78,7 +79,7 @@ func (w *Watcher) EventBroadcaster() eventbus.Broadcaster[Event] {
 }
 
 func (w *Watcher) Run(ctx context.Context) error {
-	log := slog.With("component", "WgWatcher", "device", w.device)
+	log := logger.ForComponent[Watcher]("device", w.device)
 	log.Info("polling WireGuard device for events")
 
 	s := state{

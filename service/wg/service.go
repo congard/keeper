@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"keeper/pkg/eventbus"
+	"keeper/pkg/logger"
 	"keeper/pkg/svcutil"
 	"log/slog"
 
@@ -33,12 +34,12 @@ func NewService(config ServiceConfig) (*Service, error) {
 
 	var watcher *Watcher
 
-	logger := slog.With("component", "WgService", "device", config.device)
+	log := logger.ForComponent[Service]("device", config.device)
 
 	if config.context != nil {
 		watcher = NewWatcher(config.device, client, append(
 			config.watcherOptions, WithPeerNameResolver(config.nameResolver))...)
-		svcutil.Go(logger, func() error { return watcher.Run(config.context) })
+		svcutil.Go(log, func() error { return watcher.Run(config.context) })
 	}
 
 	return &Service{
@@ -46,7 +47,7 @@ func NewService(config ServiceConfig) (*Service, error) {
 		nameResolver: config.nameResolver,
 		watcher:      watcher,
 		client:       client,
-		log:          logger,
+		log:          log,
 	}, nil
 }
 

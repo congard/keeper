@@ -2,10 +2,9 @@ package transport
 
 import (
 	"context"
-	"log/slog"
-	"reflect"
-
 	"keeper/pkg/eventbus"
+	"keeper/pkg/logger"
+	"log/slog"
 )
 
 type Publisher[T any] struct {
@@ -24,7 +23,7 @@ func (p *Publisher[T]) Run(ctx context.Context) error {
 	sub := p.broadcaster.Subscribe()
 	defer sub.Unsubscribe()
 
-	log := slog.With("component", "publisher", "endpoint", reflect.TypeOf(p.sender).String())
+	log := logger.ForComponent[Publisher[T]]()
 
 	for {
 		select {

@@ -3,6 +3,7 @@ package stats
 import (
 	"context"
 	"keeper/pkg/eventbus"
+	"keeper/pkg/logger"
 	"keeper/pkg/svcutil"
 	"log/slog"
 	"time"
@@ -16,16 +17,16 @@ type Service struct {
 }
 
 func NewService(ctx context.Context, pollInterval time.Duration) *Service {
-	logger := slog.With("component", "StatsService")
+	log := logger.ForComponent[Service]()
 
 	service := &Service{
 		pollInterval: pollInterval,
 		context:      ctx,
 		eventBus:     eventbus.New[HostMetrics](),
-		logger:       logger,
+		logger:       log,
 	}
 
-	svcutil.Go(logger, service.runPoller)
+	svcutil.Go(log, service.runPoller)
 
 	return service
 }
