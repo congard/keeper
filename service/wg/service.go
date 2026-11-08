@@ -11,9 +11,9 @@ import (
 )
 
 type ServiceConfig struct {
-	device         string
-	nameResolver   PeerNameResolver
-	watcherOptions []WatcherOption
+	Device         string
+	NameResolver   PeerNameResolver
+	WatcherOptions []WatcherOption
 }
 
 type Service struct {
@@ -30,15 +30,19 @@ func NewService(config ServiceConfig) (*Service, error) {
 		return nil, fmt.Errorf("failed to open wgctrl client: %w", err)
 	}
 
-	watcher := NewWatcher(config.device, client, append(
-		config.watcherOptions, WithPeerNameResolver(config.nameResolver))...)
+	if config.NameResolver == nil {
+		config.NameResolver = DefaultPeerNameResolver
+	}
+
+	watcher := NewWatcher(config.Device, client, append(
+		config.WatcherOptions, WithPeerNameResolver(config.NameResolver))...)
 
 	return &Service{
-		device:       config.device,
-		nameResolver: config.nameResolver,
+		device:       config.Device,
+		nameResolver: config.NameResolver,
 		watcher:      watcher,
 		client:       client,
-		log:          logger.ForComponent[Service]("device", config.device),
+		log:          logger.ForComponent[Service]("device", config.Device),
 	}, nil
 }
 

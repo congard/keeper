@@ -44,7 +44,7 @@ func NewWatcher(device string, client *wgctrl.Client, opts ...WatcherOption) *Wa
 		eventBus:         eventbus.New[Event](),
 		interval:         5 * time.Second,
 		peerTimeout:      3 * time.Minute,
-		peerNameResolver: func(_ string) string { return "" },
+		peerNameResolver: DefaultPeerNameResolver,
 		device:           device,
 		client:           client,
 	}

@@ -17,6 +17,10 @@ type Peer struct {
 
 type PeerNameResolver func(pubkey string) (name string)
 
+func DefaultPeerNameResolver(_ string) string {
+	return ""
+}
+
 func newPeer(p wgtypes.Peer, nameResolver PeerNameResolver) Peer {
 	pubKey := p.PublicKey.String()
 	return Peer{
