@@ -6,9 +6,14 @@ import (
 )
 
 type Plugin interface {
+	Run(ctx context.Context) error
+	Close() error
+}
+
+type Loader interface {
 	Name() string
 	ConfigSchema() any
-	Execute(ctx context.Context, config any) error
+	Execute(config any) (Plugin, error)
 }
 
 func CastConfig[C any](config any) (C, error) {

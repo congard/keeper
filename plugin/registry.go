@@ -6,24 +6,24 @@ import (
 )
 
 type Entry struct {
-	plugin   Plugin
+	loader   Loader
 	children []*Entry
 }
 
 type registryEntry struct {
-	plugin     Plugin
+	loader     Loader
 	parentType reflect.Type
 }
 
 var registry = make([]registryEntry, 0)
 
 func register(p registryEntry) error { // TODO: cycle detection?
-	pluginType := reflect.TypeOf(p.plugin)
+	loaderType := reflect.TypeOf(p.loader)
 	for i := range registry {
-		if reflect.TypeOf(registry[i].plugin) == pluginType {
+		if reflect.TypeOf(registry[i].loader) == loaderType {
 			return fmt.Errorf(
-				"plugin %q (%s) is already registered",
-				p.plugin.Name(), pluginType,
+				"plugin loader %q (%s) is already registered",
+				p.loader.Name(), loaderType,
 			)
 		}
 	}
@@ -31,37 +31,37 @@ func register(p registryEntry) error { // TODO: cycle detection?
 	return nil
 }
 
-func Register(p Plugin) error {
+func Register(p Loader) error {
 	return register(registryEntry{p, nil})
 }
 
-func RegisterWithParent[P Plugin](p Plugin) error {
-	parentType := reflect.TypeFor[P]()
+func RegisterWithParent[L Loader](p Loader) error {
+	parentType := reflect.TypeFor[L]()
 	if parentType == reflect.TypeOf(p) {
-		return fmt.Errorf("plugin %q cannot be registered as its own parent", p.Name())
+		return fmt.Errorf("plugin loader %q cannot be registered as its own parent", p.Name())
 	}
 	return register(registryEntry{p, parentType})
 }
 
-func RegisteredPlugins() ([]*Entry, error) {
-	entries := make(map[*Plugin]*Entry)
+func RegisteredLoaders() ([]*Entry, error) {
+	entries := make(map[*Loader]*Entry)
 	root := Entry{nil, make([]*Entry, 0)}
 
 	var visit func(*registryEntry) (*Entry, error)
 	visit = func(details *registryEntry) (*Entry, error) {
-		if entry, exists := entries[&details.plugin]; exists {
+		if entry, exists := entries[&details.loader]; exists {
 			return entry, nil
 		}
 
-		entry := &Entry{details.plugin, make([]*Entry, 0)}
-		entries[&details.plugin] = entry
+		entry := &Entry{details.loader, make([]*Entry, 0)}
+		entries[&details.loader] = entry
 
 		var parent *Entry
 		if details.parentType == nil {
 			parent = &root
 		} else {
 			for i := range registry {
-				if reflect.TypeOf(registry[i].plugin) == details.parentType {
+				if reflect.TypeOf(registry[i].loader) == details.parentType {
 					p, err := visit(&registry[i])
 					if err != nil {
 						return nil, err
@@ -73,8 +73,8 @@ func RegisteredPlugins() ([]*Entry, error) {
 
 			if parent == nil {
 				return nil, fmt.Errorf(
-					"plugin %q declares parent %s, but no plugin of that type is registered",
-					details.plugin.Name(), details.parentType,
+					"plugin loader %q declares parent %s, but no plugin of that type is registered",
+					details.loader.Name(), details.parentType,
 				)
 			}
 		}
